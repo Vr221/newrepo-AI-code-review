@@ -1,42 +1,73 @@
 import streamlit as st
-import google.generativeai as genai
 import os
+import google.generativeai as genai
+from dotenv import load_dotenv
+import ast
 
-# API Key setup (env or Streamlit Secrets)
-api_key = st.secrets["AIzaSyAYBSadaJEhspMTinbki7HCjG5q4nV_6ao"] if "GEMINI_API_KEY" in st.secrets else os.getenv("GEMINI_API_KEY")
-if not api_key:
-    st.error("❌ Gemini API key not found. Please set GEMINI_API_KEY in Streamlit secrets or environment.")
+load_dotenv()
+
+# Configure API key, handle possible missing key
+try:
+    genai.configure(api_key=os.getenv("GAIzaSyAYBSadaJEhspMTinbki7HCjG5q4nV_6ao"))
+except Exception as e:
+    st.error(f"Error configuring Gemini API: {e}")
     st.stop()
 
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel("gemini-pro")
-
 # Streamlit UI
-st.set_page_config(page_title="AI Python Code Reviewer", layout="centered")
-st.title("🤖 AI-Based Python Code Reviewer")
-st.write("Paste your Python code below and get a detailed AI-generated review.")
+st.title("🕵🏽‍♂️ Python Code Reviewer")
+st.write("Review your Python code here to detect bugs and receive suggested fixes!")
 
-# Code input
-code_input = st.text_area("Enter your Python Code:", height=300, placeholder="e.g. def add(a, b): return a + b")
+# User Input
+code_input = st.text_area("Paste your Python code here:", height=200)
 
-# Review button
-if st.button("🔍 Review Code"):
-    if not code_input.strip():
-        st.warning("Please enter some Python code.")
-    else:
-        with st.spinner("Analyzing your code with Gemini AI..."):
-            prompt = (
-                "You are an expert Python code reviewer.\n"
-                "Please review the following Python code and provide:\n"
-                "- Syntax or logic issues\n"
-                "- Suggestions for improvement\n"
-                "- Code readability and performance tips\n"
-                "- A corrected version if needed\n\n"
-                f"Code:\n```python\n{code_input}\n```"
-            )
+if st.button("Review Code"):
+    if code_input.strip():
+        # Validate if the input is valid python code
+        try:
+            ast.parse(code_input)
+        except SyntaxError as e:
+            st.error(f"⚠️ Invalid Python code: {e}")
+            st.stop()
+
+        with st.spinner("Reviewing your code... ⏳"):
+            user_prompt = f"""
+            You are a professional Python code reviewer.
+            - Analyze the following Python code for **errors, inefficiencies, and improvements**.
+            - Provide a **bug report** with explanations.
+            - Give a **fully corrected version** of the code.
+
+            Here is the user's code:
+            ```python
+            {code_input}
+            ```
+
+            Please return the response in **Markdown format** with:
+            - A "Bug Report" section listing errors and explanations.
+            - A "Fixed Code" section containing the corrected Python code inside a Markdown block.
+
+            For example:
+
+            Bug Report:
+            - Error 1: ... explanation ...
+            - Error 2: ... explanation ...
+
+            Fixed Code:
+
+            ```python
+            # corrected code here
+            ```
+            """
+
             try:
-                response = model.generate_content(prompt)
-                st.subheader("🧠 AI Review Result")
+                # Initialize the model inside the button click to avoid initialization on every run
+                model = genai.GenerativeModel(model_name="models/gemini-2.0-flash-exp") # Or "gemini-2.0-flash"
+
+                response = model.generate_content(user_prompt)
+
+                st.subheader("🔍 AI Code Review Report")
                 st.markdown(response.text)
             except Exception as e:
-                st.error(f"Error while analyzing code: {e}")
+                st.error(f"An error occurred during code review: {e}")
+
+    else:
+        st.warning("⚠️ Please enter Python code before submitting.")
