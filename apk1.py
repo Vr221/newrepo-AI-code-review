@@ -4,7 +4,7 @@ import google.generativeai as genai
 genai.configure(api_key="AIzaSyAYBSadaJEhspMTinbki7HCjG5q4nV_6ao")
 
 # Set your API Key here (recommended: use environment variable in production)
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])  # Secure way via Streamlit Secrets
+genai.configure(api_key=st.secrets["AIzaSyAYBSadaJEhspMTinbki7HCjG5q4nV_6ao"])  # Secure way via Streamlit Secrets
 model = genai.GenerativeModel("gemini-pro")
 
 st.set_page_config(page_title="AI Python Code Reviewer", layout="centered")
