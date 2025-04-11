@@ -1,33 +1,63 @@
 import streamlit as st
-import google.generativeai as genai
+import openai
+import os
 
-genai.configure(api_key="AIzaSyAYBSadaJEhspMTinbki7HCjG5q4nV_6ao")
+# Set your OpenAI API key (replace with your actual key or use environment variables)
+# os.environ["OPENAI_API_KEY"] = "YOUR_OPENAI_API_KEY"  # Or set it directly below (less secure)
+openai.api_key = os.getenv("OPENAI_API_KEY") # Recommended: Get API key from environment variables
 
-# Set your API Key here (recommended: use environment variable in production)
-genai.configure(api_key=st.secrets["AIzaSyAYBSadaJEhspMTinbki7HCjG5q4nV_6ao"])  # Secure way via Streamlit Secrets
-model = genai.GenerativeModel("gemini-pro")
+def code_review(code, language):
+    """Reviews the given code using OpenAI's API."""
 
-st.set_page_config(page_title="AI Python Code Reviewer", layout="centered")
-st.title("🤖 AI-Based Python Code Reviewer")
-st.write("Paste your Python code below and get a detailed AI-generated review.")
+    prompt = f"""
+    Review the following {language} code and provide feedback on:
 
-# Code input
-code_input = st.text_area("Enter your Python Code:", height=300, placeholder="e.g. def add(a, b): return a + b")
+    - Code correctness and potential bugs
+    - Code style and readability
+    - Potential performance issues
+    - Security vulnerabilities (if applicable)
+    - Best practices and suggestions for improvement
 
-# Review button
-if st.button("🔍 Review Code"):
-    if not code_input.strip():
-        st.warning("Please enter some Python code.")
+    ```python
+    {code}
+    ```
+    """
+
+    try:
+        response = openai.Completion.create(
+            engine="gpt-3.5-turbo",  # Or another suitable model like "text-davinci-003"
+            prompt=prompt,
+            max_tokens=500,  # Adjust as needed
+            n=1,
+            stop=None,
+            temperature=0.5, # Adjust for creativity vs. correctness
+        )
+        review = response.choices[0].text.strip()
+        return review
+    except Exception as e:
+        return f"Error during code review: {e}"
+
+
+
+st.title("AI Code Reviewer")
+
+code_input = st.code_area("Enter your code here", height=300)
+language = st.selectbox("Select programming language", ["Python", "JavaScript", "Java", "C++", "C#", "Go", "Ruby", "PHP", "Swift", "Kotlin"]) # Add more languages as needed
+# language = st.text_input("Enter the programming language (e.g., Python, JavaScript)") # Alternative if you want free text input
+
+if st.button("Review Code"):
+    if not code_input:
+        st.warning("Please enter some code to review.")
     else:
-        with st.spinner("Analyzing your code with Gemini AI..."):
-            prompt = f"""
-You are an expert Python code reviewer.
-Please review the following Python code and provide:
-- Syntax or logic issues
-- Suggestions for improvement
-- Code readability and performance tips
-- A corrected version if needed
+        with st.spinner("Reviewing your code..."):
+            review_result = code_review(code_input, language)
+            st.subheader("Code Review:")
+            st.write(review_result)
 
-Code:
-```python
-{code_input}
+
+# Optional: Add more features like:
+# - Uploading code files
+# - Displaying code diffs
+# - Saving reviews
+# - User authentication
+# - Integration with GitHub or other code repositories
